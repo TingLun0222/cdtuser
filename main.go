@@ -390,6 +390,37 @@ func DeleteHandler(c *gin.Context) {
 func RootHandler(c *gin.Context) {
         c.JSON(http.StatusOK, gin.H{"message": "successful"})
 }
+/////////////////////teacherlogin/////////////////////////////
+func TeacherLogin(userid string, password string) error {
+        var teacherUser =  &Teacher{}
+        if err := FindUserExistInTable(teacherUser,"userid = ?",userid); err != nil{
+                return err
+        }
+        if !(teacherUser.Userid==userid && teacherUser.Password==password){
+                return errors.New("User or Password Error")
+        }
+        return nil
+}
+
+func TeacherLoginHandler(c *gin.Context) {
+        var teacherData struct {
+                Userid   string `json:"userid"`
+                Password string `json:"password" binding:"required,min=8"`
+        }
+        if err := c.ShouldBindJSON(&teacherData); err != nil {
+                //c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                StatusSelection(c, err)
+                return
+        }
+        err := TeacherLogin(teacherData.Userid, teacherData.Password)
+        if err!= nil {
+                //c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                StatusSelection(c, err)
+                return
+        }
+        c.JSON(http.StatusOK,gin.H{})
+}
+
 func main() {
         // Initialize the database.
         initDatabase()
@@ -404,6 +435,7 @@ func main() {
         router.POST("/deletemail", DeleteHandler)
         router.POST("/updatepassword", UpdatePasswordHandler)
         router.POST("/updatename", UpdateNameHandler)
+	router.POST("/teacherlogin", TeacherLoginHandler)
         router.GET("/", RootHandler)
         // Start the server.
         if err := router.Run(":80"); err != nil {
