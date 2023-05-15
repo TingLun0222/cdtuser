@@ -75,7 +75,7 @@ func UpdateUserInTable(record interface{}, email string) error {
 
 func SendVerify(email string, token string) error {
         from := "cdt.offic1@gmail.com"           // 你的 Gmail 地址
-        password := "cwoafvfxipjzamjt"        // 你的 Gmail 密碼
+        password := "kepylqygohrayqwh"        // 你的 Gmail 密碼
         to := email      // 收件人電子郵件地址
         subject := "email verification\n" // 主題
         body := fmt.Sprintf("Please verify your email address \n your verification code %s", token)
@@ -84,6 +84,27 @@ func SendVerify(email string, token string) error {
         err := smtp.SendMail("smtp.gmail.com:587", auth, from, []string{to}, message)
         return err
 }
+func SendVerifyHandler(c *gin.Context) {
+        // Parse the user's registration data from the request body.
+       	var postData struct {
+		Email string `json:"email"`
+    		Token string `json:"token"`
+	}
+        if err := c.ShouldBindJSON(&postData); err != nil {
+                //log.Print("JSON ERROR\n")
+                StatusSelection(c, err)
+                //c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                return
+        }
+        if err := SendVerify(postData.Email,postData.Token); err != nil {
+                //log.Print("REGISTER ERROR\n")
+                //c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+                StatusSelection(c, err)
+                return
+        }
+        c.JSON(http.StatusOK, gin.H{"message": "registration successful"})
+}
+
 /////////////////狀態選則器/////////////////////
 func StatusSelection(c *gin.Context ,err error){
         switch err.Error() {
@@ -418,7 +439,13 @@ func TeacherLoginHandler(c *gin.Context) {
                 StatusSelection(c, err)
                 return
         }
-        c.JSON(http.StatusOK,gin.H{})
+	var users []User
+	Database.Where("Teacher = ?", teacherData.Userid).Find(&users)
+	var userIDs []string
+    	for _, user := range users {
+        	userIDs = append(userIDs, user.Userid)
+    	}
+	c.JSON(http.StatusOK,gin.H{"students":userIDs})
 }
 
 func main() {
@@ -436,7 +463,8 @@ func main() {
         router.POST("/updatepassword", UpdatePasswordHandler)
         router.POST("/updatename", UpdateNameHandler)
 	router.POST("/teacherlogin", TeacherLoginHandler)
-        router.GET("/", RootHandler)
+        router.POST("/sendverify", SendVerifyHandler)
+	router.GET("/", RootHandler)
         // Start the server.
         if err := router.Run(":80"); err != nil {
                 log.Fatalf("failed to start server: %v", err)
